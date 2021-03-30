@@ -25,7 +25,7 @@ entity Top_Module is port(
     SCK                     : in std_logic;
     --+++++++++++++++++++++ UFL ADC ++++++++++++++++++++++--
     ADC_CLK                 : out std_logic;
---    OTR                     : in std_logic;
+    OTR                     : in std_logic;
     D                       : in  std_logic_vector ( 11 downto 0);
     --+++++++++++++++++++++ QSPI ++++++++++++++++++++++++++--
     QSPI_NCS                : in std_logic;
@@ -38,19 +38,20 @@ entity Top_Module is port(
     EVENT8                  :  out std_logic;
     --++++++++++++++++++++++++++++++++++++++++++++++++++++++--
     clock                   : in std_logic;
---    clk_out                 : out std_logic;
+    clk_out                 : out std_logic;
     ------------------------------
     -- external signals
     Interlock_IN            : in std_logic;-- Interlock
-    Trigatron_IN            : in std_logic;-- Trigatron
-    Slave_Ready_IN          : in std_logic; -- Slave Ready
-    Ext_Start_Out           : out std_logic;
+	 Trigatron_IN				 : in std_logic;-- Trigatron
+	 Slave_Ready_IN				: in std_logic; -- Slave Ready
+    Ext_Start_Out        	: out std_logic;
     Ext_Start_IN            : in std_logic;
-    Slave_Start_Out_Int     : in std_logic;
+	 Slave_Start_Out_Int     : in std_logic;
+	 Slave_Sync 				: out std_logic;
 ----------------------------------------------
     -- discrete INout interface
-    inputs                  : in std_logic_vector (1 downto 0);
-    pin_outputs             : out std_logic_vector (4 downto 0);
+    inputs                  : in std_logic_vector (7 downto 0);
+    pin_outputs             : out std_logic_vector (7 downto 0);
 ----------------------------------------------
     F_CH1_IN                : in std_logic;
 ----------------------------------------------
@@ -74,9 +75,6 @@ entity Top_Module is port(
     RX4_IN                  : in std_logic;
     TX4_OUT                 : out std_logic;
     RX4_OUT                 : out std_logic;
-
-    StatusPin               : out std_logic;
-    StatusLed               : out std_logic;
 
 ----------------------------------------------
 --QUADRATOR synchro signals--
@@ -186,34 +184,13 @@ architecture arch of Top_Module is
   signal quad_gate            : std_logic;
   signal qstartv              : std_logic_vector(2 downto 0);
   signal qstopv               : std_logic_vector(2 downto 0);
-
-  signal toLedSig             : std_logic;
-  signal toLedCnt             : std_logic_vector(31 downto 0);
+  signal ufl_start_vec			: std_logic_vector(2 downto 0);
 
 begin
 
 checking <= freq_gen_output;
 Ext_Start_Out <= Slave_Start_Out_Int;
 
-StatusPin <= not rst;
-
-StatusLed <= toLedSig;
-
-toLedSig_proc:
-  process(clk100MHz, rst) 
-  begin
-    if(rst = '0') then
-      toLedSig <= '0';
-      toLedCnt <=(others => '0');
-    elsif rising_edge(clk100MHz) then
-      if (toLedCnt >=100000000/2) then
-        toLedCnt <= (others => '0');
-        toLedSig <= not toLedSig;
-      else
-        toLedCnt <= toLedCnt+1;
-      end if;
-    end if;
-  end process;
 
 SPI_MODUL_INST : ENTITY spi_master
     generic map(
@@ -451,8 +428,9 @@ timer_out(0) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(TIMER0)) when enable = '
 timer_out(1) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(TIMER1)) when enable = '1' else '0';  -- slave
 timer_out(2) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(TIMER2)) when enable = '1' else '0';  -- trig
 timer_out(3) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(TIMER3)) when enable = '1' else '0';  -- fast adc
+Slave_Sync  <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(TIMER1)) when enable = '1' else '0';  -- slave
 
-ufl_start <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER0)) when enable = '1' else '0';  -- Ufl ADC   (internal)
+ufl_start_vec(0) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER0)) when enable = '1' else '0';  -- Ufl ADC   (internal)
 aux_timer_out(0) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER0)) when enable = '1' else '0';  -- Ufl ADC   (internal)
 aux_timer_out(1) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER1)) when enable = '1' else '0';  -- Urec adc           (to controller)
 aux_timer_out(2) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER2)) when enable = '1' else '0';  -- QUAD oscillogram   (to controller)
@@ -466,6 +444,16 @@ QuadGate <= quad_gate;
 
 ----UFL ADC ----
 data_recorder_rst <= rst or qspi_slave_x_cs_up(0);
+ufl_start_vec_proc :
+process(clk100MHz, rst)
+begin
+  if (rst = '1') then
+    ufl_start <= '0';
+  elsif rising_edge(clk100MHz) then
+    ufl_start_vec(ufl_start_vec'length - 1 downto 1) <= ufl_start_vec(ufl_start_vec'length-2 downto 0);
+	 ufl_start <= ufl_start_vec(ufl_start_vec'length - 2) and (not ufl_start_vec(ufl_start_vec'length - 1));
+  end if;
+end process;
 
 process(clk100MHz)
 begin

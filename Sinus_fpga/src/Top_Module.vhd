@@ -461,7 +461,7 @@ begin
     clk_to_adc <= '0';
     div_cnt <= 0;
   elsif rising_edge(clk100MHz) then
-    if (div_cnt < 4) then
+    if (div_cnt < 1) then
       div_cnt <= div_cnt + 1;
     else
       div_cnt <= 0;

@@ -188,7 +188,7 @@ architecture arch of Top_Module is
 
 begin
 
-checking <= freq_gen_output;
+checking <= PulseGen_Block_start;--freq_gen_output;
 Ext_Start_Out <= Slave_Start_Out_Int;
 
 

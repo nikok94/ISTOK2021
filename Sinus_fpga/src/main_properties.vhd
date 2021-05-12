@@ -34,6 +34,7 @@ package main_properties is
 
   type CONTROL_STRUCT is (
     SLAVE_ENABLE,
+    RST_ALL,
     STRUCT_LENGTH
   );
 

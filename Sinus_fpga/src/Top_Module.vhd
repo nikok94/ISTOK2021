@@ -42,12 +42,14 @@ entity Top_Module is port(
     ------------------------------
     -- external signals
     Interlock_IN            : in std_logic;-- Interlock
-	 Trigatron_IN				 : in std_logic;-- Trigatron
-	 Slave_Ready_IN				: in std_logic; -- Slave Ready
+    Trigatron_IN				 : in std_logic;-- Trigatron
+    Slave_Ready_IN				: in std_logic; -- Slave Ready
     Ext_Start_Out        	: out std_logic;
     Ext_Start_IN            : in std_logic;
-	 Slave_Start_Out_Int     : in std_logic;
-	 Slave_Sync 				: out std_logic;
+    Slave_Start_Out_Int     : in std_logic;
+    Slave_Sync 				: out std_logic;
+    
+    ExtRst                  : in std_logic;
 ----------------------------------------------
     -- discrete INout interface
     inputs                  : in std_logic_vector (7 downto 0);
@@ -184,7 +186,7 @@ architecture arch of Top_Module is
   signal quad_gate            : std_logic;
   signal qstartv              : std_logic_vector(2 downto 0);
   signal qstopv               : std_logic_vector(2 downto 0);
-  signal ufl_start_vec			: std_logic_vector(2 downto 0);
+  signal ufl_start_vec        : std_logic_vector(2 downto 0);
 
 begin
 
@@ -339,6 +341,7 @@ PulseGen_Block_start <= freq_gen_output when (master_mode = '1') else ext_start_
 pll_1 : entity PLL1 
 port map
   (
+    areset  => '0',
     inclk0  => clock,
     c0      => clk200MHz,
     c1      => clk100MHz,

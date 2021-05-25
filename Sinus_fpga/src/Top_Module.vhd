@@ -39,7 +39,7 @@ entity Top_Module is port(
     EVENT8                  :  out std_logic;
     --++++++++++++++++++++++++++++++++++++++++++++++++++++++--
     clock                   : in std_logic;
-    clk_out                 : out std_logic;
+    --clk_out                 : out std_logic;
     ------------------------------
     -- external signals
     Interlock_IN            : in std_logic;-- Interlock

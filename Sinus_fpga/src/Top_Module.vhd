@@ -17,6 +17,7 @@ use work.data_recorder;
 use work.QSPI_interconnect;
 use work.PulseGen_Block;
 use work.freq_gen;
+use work.remoteUpdate_Module;
 
 entity Top_Module is port(
     MISO                    : inout std_logic;
@@ -77,6 +78,9 @@ entity Top_Module is port(
     RX4_IN                  : in std_logic;
     TX4_OUT                 : out std_logic;
     RX4_OUT                 : out std_logic;
+    
+    remBusy                 : out std_logic;
+    remReconf               : in std_logic;
 
 ----------------------------------------------
 --QUADRATOR synchro signals--
@@ -187,8 +191,26 @@ architecture arch of Top_Module is
   signal qstartv              : std_logic_vector(2 downto 0);
   signal qstopv               : std_logic_vector(2 downto 0);
   signal ufl_start_vec        : std_logic_vector(2 downto 0);
+  signal remoteUpdate_Module_busy : std_logic;
 
 begin
+
+remoteUpdate_Module_inst : ENTITY remoteUpdate_Module
+  PORT MAP
+  (
+    clock           => clock,
+    param           => "000",
+    read_param      => '0',
+    read_source     => "00",
+    reconfig        => remReconf,
+    reset           => '0',
+    reset_timer     => '0',
+    busy            => remoteUpdate_Module_busy,
+    data_out        => open
+  );
+
+remBusy <= locked and (not remoteUpdate_Module_busy);
+
 
 checking <= PulseGen_Block_start;--freq_gen_output;
 Ext_Start_Out <= Slave_Start_Out_Int;

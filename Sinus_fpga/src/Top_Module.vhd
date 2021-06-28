@@ -36,7 +36,8 @@ entity Top_Module is port(
     QSPI_IO2                : inout std_logic;
     QSPI_IO3                : inout std_logic;	
     --++++++++++++++++++++++++++++++++++++++++++++++++++++++--
-    EVENT8                  :  out std_logic;
+    EVENT8                  : out std_logic;
+    pin_68                  : out std_logic;
     --++++++++++++++++++++++++++++++++++++++++++++++++++++++--
     clock                   : in std_logic;
     --clk_out                 : out std_logic;
@@ -81,6 +82,8 @@ entity Top_Module is port(
     
     remBusy                 : out std_logic;
     remReconf               : in std_logic;
+    
+    pin_98                   : out std_logic;
 
 ----------------------------------------------
 --QUADRATOR synchro signals--
@@ -192,6 +195,7 @@ architecture arch of Top_Module is
   signal qstopv               : std_logic_vector(2 downto 0);
   signal ufl_start_vec        : std_logic_vector(2 downto 0);
   signal remoteUpdate_Module_busy : std_logic;
+  signal Slave_Ready_IN_n     : std_logic;
 
 begin
 
@@ -219,7 +223,7 @@ Ext_Start_Out <= Slave_Start_Out_Int;
 SPI_MODUL_INST : ENTITY spi_master
     generic map(
       C_CPHA            => '1',
-      C_CPOL            => '1',
+      C_CPOL            => '0',
       C_LSB_FIRST       => false
     )
     Port map( 
@@ -440,7 +444,11 @@ end generate;
 
   int_status(STATUS_STRUCT'pos(INTERLOCK))  <= not Interlock_IN; --tmp_inputs(7);
   int_status(STATUS_STRUCT'pos(TRIGATRON))  <= not Trigatron_IN;
-  int_status(STATUS_STRUCT'pos(SLAVE_READY))  <= not Slave_Ready_IN;
+  
+  Slave_Ready_IN_n <= not Slave_Ready_IN;
+  int_status(STATUS_STRUCT'pos(SLAVE_READY))  <= Slave_Ready_IN_n;
+  
+  pin_68 <= Slave_Ready_IN_n;
 
   timers_trigger <= '0';
 
@@ -462,6 +470,11 @@ aux_timer_out(2) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER2)) when en
 aux_timer_out(3) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER3)) when enable = '1' else '0';  -- QUAD start         (to controller)
 aux_timer_out(4) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER4)) when enable = '1' else '0';  -- QUAD stop          (to controller)
 aux_timer_out(5) <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER5)) when enable = '1' else '0';  -- reserved           (to controller)
+
+--pin_98 <= shooter_running;
+--pin_98 <= PulseGen_Block_start;
+pin_98 <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(TIMER1)) when enable = '1' else '0';  -- slave
+--pin_98 <= enable;
 
 
 QuadStartOsc <= PulseGen_Block_pulse(SPI_REG_STRUCT'pos(AUX_TIMER2)) when enable = '1' else '0';

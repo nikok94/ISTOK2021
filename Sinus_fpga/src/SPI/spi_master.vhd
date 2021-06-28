@@ -77,6 +77,7 @@ architecture Behavioral of spi_master is
     signal spi_tr_irq                   : std_logic;
     signal t_data                       : std_logic_vector(spi_data_whidth - 1 downto 0);
     signal tload                        : std_logic := '0';
+    signal mosi_r                       : std_logic;
 
 begin
 rst <= m_fcb_areset;
@@ -93,6 +94,7 @@ spi_receiver_inst : entity spi_data_receiver
       SCK          => SCK ,
       CS           => CS  ,
       MOSI         => mosi_i,
+      MOSI_reg     => mosi_r,
       
       data         => spi_rec_data,
       valid        => spi_rec_valid
@@ -201,7 +203,7 @@ state_proc :
             tload <= '0';
           end if;
         when last_st =>
-
+          state <= idle;
         when others =>
          spi_buff_addr <= 0;
          m_fcb_rdreq <= '0';

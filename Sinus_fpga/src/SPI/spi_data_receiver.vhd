@@ -16,6 +16,7 @@ entity spi_data_receiver is
       SCK           : in std_logic;
       CS            : in std_logic;
       MOSI          : in std_logic;
+      MOSI_reg      : out std_logic;
       
       DATA          : out std_logic_vector(C_D_WIDTH - 1 downto 0);
       VALID         : out std_logic
@@ -44,6 +45,7 @@ input_reg_proc :
     if rising_edge(ssck) then
       input_reg(input_reg'length - 1 downto 1) <= input_reg(input_reg'length - 2 downto 0);
       input_reg(0) <= MOSI;
+      MOSI_reg <= MOSI;
     end if;
   end process;
 

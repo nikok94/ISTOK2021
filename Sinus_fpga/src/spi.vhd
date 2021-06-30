@@ -2,122 +2,151 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 library work;
-use work.spi_master;
+--use work.spi_master;
 use work.main_properties.all;
 
 
 entity SPI_slave is
   generic( 
-    cpol        : STD_LOGIC := '1';  --spi clock polarity mode
-    cpha        : STD_LOGIC := '1';  --spi clock phase mode
-    d_width     : INTEGER := 16      --data width in bits
+    c_d_width     : INTEGER := 16      --data width in bits
     );
   port(
-    -- internal ports:
-    clk                     : in std_logic;
-    spi_offset_regs_out     : out SPI_REG_PULSE_OFFSET_TYPE;
-    spi_control_regs_out    : out SPI_REG_RW_TYPE;
-    spi_status_regs_in      : in SPI_REG_R_TYPE;
+    busy                      : out std_logic;
+    busy_addr                 : out integer;
+    data_in                   : in SPI_REG_TYPE;
+    data_out                  : out SPI_REG_TYPE;
     --external ports
-    SCK                     : in std_logic;
-    CS                      : in std_logic;
-    MOSI                    : in std_logic;
-    MISO                    : inout std_logic
+    SCK                       : in std_logic;
+    CS                        : in std_logic;
+    MOSI                      : in std_logic;
+    MISO                      : inout std_logic
   );
 end SPI_slave;
 
 architecture behav of SPI_slave is
+--  signal mode           : std_logic;
+  signal ssck           : std_logic;
+  
+  signal wreg           : std_logic_vector(c_d_width - 1 downto 0):=(others => '0');
+  signal w_bit_cnt      : integer:= 0;
+  signal w_word_cnt     : integer:= 0;
+  
+  signal renable        : std_logic:='0';
+  signal rreg           : std_logic_vector(c_d_width - 1 downto 0):=(others => 'Z');
+  signal r_bit_cnt      : integer:= 0;
+  signal r_word_cnt     : integer:= 0;
+  signal addr           : integer:= 0;
 
-  signal reg_adr_int              : integer range 0 to SPI_REG_NUMBER - 1;
-
-  signal m_fcb_addr           : std_logic_vector(16 - 1 downto 0);
-  signal m_fcb_wrdata         : std_logic_vector(32 - 1 downto 0);
-  signal m_fcb_wrreq          : std_logic;
-  signal m_fcb_wrack          : std_logic;
-  signal m_fcb_rddata         : std_logic_vector(32 - 1 downto 0);
-  signal m_fcb_rdreq          : std_logic;
-  signal m_fcb_rdack          : std_logic;
-  signal MISO_I               : std_logic;
-  signal MISO_O               : std_logic;
-  signal MISO_T               : std_logic;
-  signal MOSI_I               : std_logic;
-  signal MOSI_O               : std_logic;
-  signal MOSI_T               : std_logic;
-  signal offset_regs          : SPI_REG_PULSE_OFFSET_TYPE;
-  signal control_regs         : SPI_REG_RW_TYPE;
+  type BUFF_Type is array (2 downto 0) of std_logic_vector(c_d_width - 1 downto 0);
+  signal wbuff          : BUFF_Type;
+  signal rbuff          : BUFF_Type;
+  signal wr_en          : std_logic:='0'; 
+  signal data_to_out    : SPI_REG_TYPE:=
+    ( 0 => (others => '0'),
+      1 => (others => '0'),
+      2 => (others => '0'),
+      3 => (others => '0'),
+      4 => (others => '0'),
+      5 => (others => '0'),
+      6 => (others => '0'),
+      7 => (others => '0'),
+      8 => (others => '0'),
+      9 => (others => '0'),
+     10 => (others => '0'),
+     11 => (others => '0'),
+     12 => (others => '0'),
+     13 => (others => '0'),
+     14 => (others => '0'),
+     15 => (others => '0'),
+     16 => (others => '0')
+    );
 
 begin
 
-spi_offset_regs_out  <= offset_regs;
-spi_control_regs_out <= control_regs;
+busy <= not CS;
 
-SPI_MODUL_INST : ENTITY spi_master
-    generic map(
-      C_CPHA            => '1',
-      C_CPOL            => '1',
-      C_LSB_FIRST       => false
-    )
-    Port map( 
-      SCK               => SCK, 
-      CS                => CS,
+data_out <= data_to_out;
 
-      MISO_I            => MISO_I,
-      MISO_O            => MISO_O,
-      MISO_T            => MISO_T,
-      
-      MOSI_I            => MOSI_I,
-      MOSI_O            => MOSI_O,
-      MOSI_T            => MOSI_T,
+MISO <= rreg(rreg'length-1) when CS = '0' else 'Z';
 
-      m_fcb_clk         => clk,
-      m_fcb_areset      => '0',
-      m_fcb_addr        => m_fcb_addr  ,
-      m_fcb_wrdata      => m_fcb_wrdata,
-      m_fcb_wrreq       => m_fcb_wrreq ,
-      m_fcb_wrack       => m_fcb_wrack ,
-      m_fcb_rddata      => m_fcb_rddata,
-      m_fcb_rdreq       => m_fcb_rdreq ,
-      m_fcb_rdack       => m_fcb_rdack 
-    );
+ssck <= SCK;
+busy_addr <= addr;
+addr <=  to_integer(unsigned(wbuff(0)));
 
-MOSI_I <= MOSI;
-
-MISO <= MISO_O when MISO_T = '0' else 'Z';
-
-
-  reg_adr_int <= conv_integer(m_fcb_addr);
-
-  process(clk)
-  begin
-    if rising_edge(clk) then
-      if (m_fcb_wrreq = '1') then
-        if (reg_adr_int < SPI_REG_RW_NUMBER) then
-          control_regs(reg_adr_int) <= m_fcb_wrdata;
-        elsif (reg_adr_int < SPI_REG_RW_NUMBER + SPI_REG_PULSE_OFFSET_NUMBER) then
-          offset_regs(reg_adr_int - SPI_REG_RW_NUMBER) <= m_fcb_wrdata;
+process(ssck, CS)
+begin
+  if (CS = '1') then
+    w_bit_cnt <= 0;
+    w_word_cnt <= 0;
+  elsif rising_edge(ssck) then
+    if (w_bit_cnt < c_d_width-1) then
+      w_bit_cnt <= w_bit_cnt + 1;
+    else
+      w_bit_cnt <= 0;
+      if (w_word_cnt < 2) then
+        w_word_cnt <= w_word_cnt + 1;
+        if (w_word_cnt = 0) then
+          wbuff(w_word_cnt) <= x"0FFF" and (wreg(wreg'length-2 downto 0) & MOSI);
+          if (wreg(wreg'length-2 downto wreg'length-5) = x"0") then
+            wr_en <= '1';
+          else
+            wr_en <= '0';
+          end if;
+        else
+          wbuff(w_word_cnt) <= wreg(wreg'length-2 downto 0) & MOSI;
         end if;
-        m_fcb_wrack <= '1';
-      else 
-        m_fcb_wrack <= '0';
-      end if;
-      
-      if (m_fcb_rdreq = '1') then
-        if (reg_adr_int < SPI_REG_RW_NUMBER) then
-          m_fcb_rddata <= control_regs(reg_adr_int);
-        elsif (reg_adr_int < SPI_REG_RW_NUMBER + SPI_REG_PULSE_OFFSET_NUMBER) then
-          m_fcb_rddata <= offset_regs(reg_adr_int - SPI_REG_RW_NUMBER);
-        elsif (reg_adr_int < SPI_REG_NUMBER) then
-          m_fcb_rddata <= spi_status_regs_in(reg_adr_int - SPI_REG_RW_NUMBER - SPI_REG_PULSE_OFFSET_NUMBER);
+      else
+        if ((addr < SPI_REG_STRUCT'pos(CUR_SHOT)) and (wr_en = '1')) then
+          data_to_out(addr) <= wbuff(1) & wreg(wreg'length-2 downto 0) & MOSI;
         end if;
-        m_fcb_rdack <= '1';
-      else 
-        m_fcb_rdack <= '0';
+        wbuff(w_word_cnt) <= wreg(wreg'length-2 downto 0) & MOSI;
+        w_word_cnt <= 0;
       end if;
     end if;
-  end process;
+    wreg(wreg'length-1 downto 1) <= wreg(wreg'length-2 downto 0);
+    wreg(0) <= MOSI;
+  end if;
+end process;
+
+process(ssck, CS)
+begin
+  if (CS = '1') then
+    rreg <= (others => '0');
+    r_bit_cnt <= 0;
+    r_word_cnt <= 0;
+  elsif falling_edge(ssck) then
+    if (r_bit_cnt < c_d_width-1) then
+      r_bit_cnt <= r_bit_cnt + 1;
+      rreg(rreg'length-1 downto 1) <= rreg(rreg'length-2 downto 0);
+      rreg(0) <= '0';
+    else
+      r_bit_cnt <= 0;
+      if (r_word_cnt < 2) then
+        r_word_cnt <= r_word_cnt + 1;
+        if (r_word_cnt = 0) then
+          if (addr < data_in'length) then
+            rreg <= data_in(addr)(31 downto 16);
+            rbuff(0) <= data_in(addr)(31 downto 16);
+            rbuff(1) <= data_in(addr)(15 downto 0);
+            rbuff(2) <= (others => '0');
+          else
+            rreg <= (others => '0');
+            rbuff(0) <= (others => '0');
+            rbuff(1) <= (others => '0');
+            rbuff(2) <= (others => '0');
+          end if;
+        else
+          rreg <= rbuff(r_word_cnt);
+        end if;
+      else
+        r_word_cnt <= 0;
+        rreg <= rbuff(r_word_cnt);
+      end if;
+    end if;
+  end if;
+end process;
 
 end behav;

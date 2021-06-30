@@ -55,7 +55,7 @@ package main_properties is
   constant PULSE_DURATION               : integer := 1000;
   constant SPI_REG_NUMBER               : integer := SPI_REG_STRUCT'pos(STRUCT_LENGTH);
 
-  type SPI_REG_TYPE                     is array (0 to SPI_REG_STRUCT'pos(STRUCT_LENGTH)-1)                          of std_logic_vector(31 downto 0);
+  type SPI_REG_TYPE                     is array (0 to SPI_REG_NUMBER-1)                                             of std_logic_vector(31 downto 0);
   type SPI_REG_PULSE_OFFSET_TYPE        is array (0 to PULSE_NUMBER-1)                                               of std_logic_vector(31 downto 0);
 
 end main_properties;

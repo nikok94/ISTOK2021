@@ -4,7 +4,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 --use work.Sinus320D_Top;
-use work.PulseGen_Block;
+--use work.PulseGen_Block;
+use work.spi;
+use work.main_properties.all;
 
 entity TestBench is
 
@@ -67,24 +69,51 @@ architecture TestBench_arc OF TestBench IS
 --  signal timer_out              : std_logic_vector((4 - 1) downto 0);
 --  signal aux_timer_out          : std_logic_vector((4 - 1) downto 0);
   
-  constant c_pulse_number       : integer:= 4;
-  signal rst                    : std_logic;
-  signal pulse_gen_pulse        : std_logic_vector(c_pulse_number - 1 downto 0);
-  signal pulse_gen_busy         : std_logic;
-  signal pulse_gen_start        : std_logic;
-  signal pulse_gen_delay_config : std_logic_vector(c_pulse_number*32 - 1 downto 0) := x"0000000A_00000008_00000005_00000001";
+--  constant c_pulse_number       : integer:= 4;
+--  signal rst                    : std_logic;
+--  signal pulse_gen_pulse        : std_logic_vector(c_pulse_number - 1 downto 0);
+--  signal pulse_gen_busy         : std_logic;
+--  signal pulse_gen_start        : std_logic;
+--  signal pulse_gen_delay_config : std_logic_vector(c_pulse_number*32 - 1 downto 0) := x"0000000A_00000008_00000005_00000001";
+    signal data_in                : SPI_REG_TYPE;
+    signal data_out               : SPI_REG_TYPE;
+    signal SCK                    : std_logic;
+    signal CS                     : std_logic;
+    signal MOSI                   : std_logic;
+    signal MISO                   : std_logic;
 
 begin
 
-clk_gen :
-  process
-  begin
-    clk <= '0';
-    wait for 20 ns/2;
-    clk <= '1';
-    wait for 20 ns/2;
-  end process;
-  
+--clk_gen :
+--  process
+--  begin
+--    clk <= '0';
+--    wait for 20 ns/2;
+--    clk <= '1';
+--    wait for 20 ns/2;
+--  end process;
+
+SPI_slave_inst : entity SPI_slave
+  generic map( 
+    c_cpol        => '0',  --spi clock polarity mode
+    c_cpha        => '1',  --spi clock phase mode
+    c_d_width     => 16    --data width in bits
+    )
+  port map(
+    data_in                   => data_in,
+    data_out                  => data_out,
+
+    --external ports
+    SCK                       => SCK ,
+    CS                        => CS  ,
+    MOSI                      => MOSI,
+    MISO                      => MISO
+  );
+
+
+
+
+
 --  clock <= clk;
 --
 --main_proc :
@@ -154,39 +183,39 @@ clk_gen :
 --  );
 
 
-rst_gen :
-  process
-  begin
-    rst <= '1';
-    wait for 100 ns;
-    rst <= '0';
-    wait;
-  end process;
-
-gen_start :
-  process
-  begin
-    pulse_gen_start <= '0';
-    wait for 1000 ns;
-    pulse_gen_start <= '1';
-    wait for 10 ns;
-    pulse_gen_start <= '0';
-    wait;
-  end process;
-
-PulseGen_Block_inst : entity PulseGen_Block
-  generic map(
-    c_pulse_number      => 4,
-    c_pulse_duration    => 10
-  )
-  port map(
-    clk                 => clk,
-    rst                 => rst,
-    start               => pulse_gen_start,
-    delay_config        => pulse_gen_delay_config,
-    busy                => pulse_gen_busy,
-    pulse               => pulse_gen_pulse
-  );
+--rst_gen :
+--  process
+--  begin
+--    rst <= '1';
+--    wait for 100 ns;
+--    rst <= '0';
+--    wait;
+--  end process;
+--
+--gen_start :
+--  process
+--  begin
+--    pulse_gen_start <= '0';
+--    wait for 1000 ns;
+--    pulse_gen_start <= '1';
+--    wait for 10 ns;
+--    pulse_gen_start <= '0';
+--    wait;
+--  end process;
+--
+--PulseGen_Block_inst : entity PulseGen_Block
+--  generic map(
+--    c_pulse_number      => 4,
+--    c_pulse_duration    => 10
+--  )
+--  port map(
+--    clk                 => clk,
+--    rst                 => rst,
+--    start               => pulse_gen_start,
+--    delay_config        => pulse_gen_delay_config,
+--    busy                => pulse_gen_busy,
+--    pulse               => pulse_gen_pulse
+--  );
 
 
 end TestBench_arc;

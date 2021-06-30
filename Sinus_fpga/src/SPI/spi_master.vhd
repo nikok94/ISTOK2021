@@ -118,9 +118,9 @@ spi_transceiver_ist : entity spi_data_transceiver
     );
 
 spi_rec_irq_proc :
-  process(m_fcb_clk)
+  process(clk)
   begin
-    if rising_edge(m_fcb_clk) then
+    if rising_edge(clk) then
       spi_rec_valid_d0 <= spi_rec_valid;
       spi_rec_valid_d1 <= spi_rec_valid_d0;
       spi_rec_irq <= (not spi_rec_valid_d1) and spi_rec_valid_d0;

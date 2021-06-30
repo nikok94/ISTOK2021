@@ -11,7 +11,8 @@ library work;
 use work.freq_analyzer;
 use work.PLL1;
 use work.discreteI;
-use work.spi_master;
+--use work.spi_master;
+use work.SPI_slave;
 use work.main_properties.all;
 use work.data_recorder;
 use work.QSPI_interconnect;
@@ -168,23 +169,27 @@ architecture arch of Top_Module is
   signal stop_sync_vec                    : std_logic_vector(3 downto 0);
   signal stop_sync                        : std_logic;
   -- SPI REGS
-  signal spi_regs             : SPI_REG_TYPE;
+--  signal spi_regs             : SPI_REG_TYPE;
+  signal wspi_regs             : SPI_REG_TYPE;
+  signal rspi_regs             : SPI_REG_TYPE;
+  signal spi_busy              : std_logic;
+  signal spi_breg              : integer;
   
-  signal reg_adr_int          : integer range 0 to SPI_REG_NUMBER - 1;
-
-  signal m_fcb_addr           : std_logic_vector(16 - 1 downto 0);
-  signal m_fcb_wrdata         : std_logic_vector(32 - 1 downto 0);
-  signal m_fcb_wrreq          : std_logic;
-  signal m_fcb_wrack          : std_logic;
-  signal m_fcb_rddata         : std_logic_vector(32 - 1 downto 0);
-  signal m_fcb_rdreq          : std_logic;
-  signal m_fcb_rdack          : std_logic;
-  signal MISO_I               : std_logic;
-  signal MISO_O               : std_logic;
-  signal MISO_T               : std_logic;
-  signal MOSI_I               : std_logic;
-  signal MOSI_O               : std_logic;
-  signal MOSI_T               : std_logic;
+--  signal reg_adr_int          : integer range 0 to SPI_REG_NUMBER - 1;
+--
+--  signal m_fcb_addr           : std_logic_vector(16 - 1 downto 0);
+--  signal m_fcb_wrdata         : std_logic_vector(32 - 1 downto 0);
+--  signal m_fcb_wrreq          : std_logic;
+--  signal m_fcb_wrack          : std_logic;
+--  signal m_fcb_rddata         : std_logic_vector(32 - 1 downto 0);
+--  signal m_fcb_rdreq          : std_logic;
+--  signal m_fcb_rdack          : std_logic;
+--  signal MISO_I               : std_logic;
+--  signal MISO_O               : std_logic;
+--  signal MISO_T               : std_logic;
+--  signal MOSI_I               : std_logic;
+--  signal MOSI_O               : std_logic;
+--  signal MOSI_T               : std_logic;
   
   signal timer_cfg            : SPI_REG_PULSE_OFFSET_TYPE;
   signal int_cur_shot         : std_logic_vector(31 downto 0);
@@ -220,65 +225,84 @@ checking <= PulseGen_Block_start;--freq_gen_output;
 Ext_Start_Out <= Slave_Start_Out_Int;
 
 
-SPI_MODUL_INST : ENTITY spi_master
-    generic map(
-      C_CPHA            => '1',
-      C_CPOL            => '0',
-      C_LSB_FIRST       => false
+SPI_MODUL_INST : entity SPI_slave
+  generic map( 
+    c_d_width     => 16
     )
-    Port map( 
-      SCK               => SCK, 
-      CS                => CS,
+  port map(
+    busy                      => spi_busy,
+    busy_addr                 => spi_breg,
+    data_in                   => rspi_regs,
+    data_out                  => wspi_regs,
+    --external ports
+    SCK                       => SCK,
+    CS                        => CS,
+    MOSI                      => MOSI,
+    MISO                      => MISO
+  );
 
-      MISO_I            => MISO_I,
-      MISO_O            => MISO_O,
-      MISO_T            => MISO_T,
-      
-      MOSI_I            => MOSI_I,
-      MOSI_O            => MOSI_O,
-      MOSI_T            => MOSI_T,
 
-      m_fcb_clk         => clk100MHz,
-      m_fcb_areset      => '0',
-      m_fcb_addr        => m_fcb_addr  ,
-      m_fcb_wrdata      => m_fcb_wrdata,
-      m_fcb_wrreq       => m_fcb_wrreq ,
-      m_fcb_wrack       => m_fcb_wrack ,
-      m_fcb_rddata      => m_fcb_rddata,
-      m_fcb_rdreq       => m_fcb_rdreq ,
-      m_fcb_rdack       => m_fcb_rdack 
-    );
+--SPI_MODUL_INST : ENTITY spi_master
+--    generic map(
+--      C_CPHA            => '1',
+--      C_CPOL            => '0',
+--      C_LSB_FIRST       => false
+--    )
+--    Port map( 
+--      SCK               => SCK, 
+--      CS                => CS,
+--
+--      MISO_I            => MISO_I,
+--      MISO_O            => MISO_O,
+--      MISO_T            => MISO_T,
+--      
+--      MOSI_I            => MOSI_I,
+--      MOSI_O            => MOSI_O,
+--      MOSI_T            => MOSI_T,
+--
+--      m_fcb_clk         => clk100MHz,
+--      m_fcb_areset      => '0',
+--      m_fcb_addr        => m_fcb_addr  ,
+--      m_fcb_wrdata      => m_fcb_wrdata,
+--      m_fcb_wrreq       => m_fcb_wrreq ,
+--      m_fcb_wrack       => m_fcb_wrack ,
+--      m_fcb_rddata      => m_fcb_rddata,
+--      m_fcb_rdreq       => m_fcb_rdreq ,
+--      m_fcb_rdack       => m_fcb_rdack 
+--    );
+--
+--MOSI_I <= MOSI;
+--MISO <= MISO_O when MISO_T = '0' else 'Z';
+--reg_adr_int <= conv_integer(m_fcb_addr);
 
-MOSI_I <= MOSI;
-MISO <= MISO_O when MISO_T = '0' else 'Z';
-reg_adr_int <= conv_integer(m_fcb_addr);
+SPI_RW_REGS_Gen : for i in 0 to (SPI_REG_STRUCT'pos(CUR_SHOT) - 1) generate
+  rspi_regs(i) <= wspi_regs(i);
+end generate;
+
 
 SPI_REGS_RW_PROC : process(clk100MHz)
 begin
   if rising_edge(clk100MHz) then
-    if (m_fcb_wrreq = '1') then
-      m_fcb_wrack <= '1';
-      if (reg_adr_int < SPI_REG_STRUCT'pos(CUR_SHOT)) then
-        spi_regs(reg_adr_int) <= m_fcb_wrdata;
+    if (spi_busy = '1') then
+      if (spi_breg /= SPI_REG_STRUCT'pos(CUR_SHOT)) then
+        rspi_regs(SPI_REG_STRUCT'pos(CUR_SHOT)) <= int_cur_shot;
+      end if;
+      
+      if (spi_breg /= SPI_REG_STRUCT'pos(STATUS)) then
+        rspi_regs(SPI_REG_STRUCT'pos(STATUS)) <= int_status;
+      end if;
+      
+      if (spi_breg /= SPI_REG_STRUCT'pos(FREQCH12)) then
+        rspi_regs(SPI_REG_STRUCT'pos(FREQCH12)) <= int_freq;
       end if;
     else
-      m_fcb_wrack <= '0';
+      rspi_regs(SPI_REG_STRUCT'pos(CUR_SHOT)) <= int_cur_shot;
+      rspi_regs(SPI_REG_STRUCT'pos(STATUS)) <= int_status;
+      rspi_regs(SPI_REG_STRUCT'pos(FREQCH12)) <= int_freq;
     end if;
-    
-    spi_regs(SPI_REG_STRUCT'pos(CUR_SHOT)) <= int_cur_shot;
-    spi_regs(SPI_REG_STRUCT'pos(STATUS)) <= int_status;
-    spi_regs(SPI_REG_STRUCT'pos(FREQCH12)) <= int_freq;
-    
-    if (m_fcb_rdreq = '1') then
-      m_fcb_rdack <= '1';
-      if (reg_adr_int < SPI_REG_STRUCT'pos(STRUCT_LENGTH)) then
-        m_fcb_rddata <= spi_regs(reg_adr_int);
-      else
-        m_fcb_rddata <= (others => '1');
-      end if;
-    else
-      m_fcb_rdack <= '0';
-    end if;
+--    spi_regs(SPI_REG_STRUCT'pos(CUR_SHOT)) <= int_cur_shot;
+--    spi_regs(SPI_REG_STRUCT'pos(STATUS)) <= int_status;
+--    spi_regs(SPI_REG_STRUCT'pos(FREQCH12)) <= int_freq;
   end if;
 end process;
 
@@ -299,7 +323,8 @@ main_proc :
           int_status(STATUS_STRUCT'pos(SHOOTING)) <= '0';
           
           if (stop_sync ='0') then
-            if (spi_regs(SPI_REG_STRUCT'pos(CONTROL))(CONTROL_STRUCT'pos(SLAVE_ENABLE)) = '1') then
+--            if (spi_regs(SPI_REG_STRUCT'pos(CONTROL))(CONTROL_STRUCT'pos(SLAVE_ENABLE)) = '1') then
+            if (wspi_regs(SPI_REG_STRUCT'pos(CONTROL))(CONTROL_STRUCT'pos(SLAVE_ENABLE)) = '1') then
               state <= x"01";
               master_mode <= '0';
             else
@@ -398,8 +423,10 @@ freq_gen_inst : entity freq_gen
   (
     clk                     => clk100MHz,
     n_reset                 => shooter_enable,
-    period                  => spi_regs(SPI_REG_STRUCT'pos(SH_PERIOD)),
-    shots_number            => spi_regs(SPI_REG_STRUCT'pos(SH_NUMBER)),
+--    period                  => spi_regs(SPI_REG_STRUCT'pos(SH_PERIOD)),
+    period                  => wspi_regs(SPI_REG_STRUCT'pos(SH_PERIOD)),
+--    shots_number            => spi_regs(SPI_REG_STRUCT'pos(SH_NUMBER)),
+    shots_number            => wspi_regs(SPI_REG_STRUCT'pos(SH_NUMBER)),
     cur_shot                => int_cur_shot,
     freq_gen_running        => shooter_running,
     output                  => freq_gen_output
@@ -437,10 +464,11 @@ end process;
 
 
 gen_timer_cfg : for i in 0 to PULSE_NUMBER-1 generate
-  timer_cfg(i) <= spi_regs(i);
+--  timer_cfg(i) <= spi_regs(i);
+  timer_cfg(i) <= wspi_regs(i);
 end generate;
 
-  pin_outputs <= spi_regs(SPI_REG_STRUCT'pos(OUTPUTS))(pin_outputs'length-1 downto 0);
+  pin_outputs <= wspi_regs(SPI_REG_STRUCT'pos(OUTPUTS))(pin_outputs'length-1 downto 0);
 
   int_status(STATUS_STRUCT'pos(INTERLOCK))  <= not Interlock_IN; --tmp_inputs(7);
   int_status(STATUS_STRUCT'pos(TRIGATRON))  <= not Trigatron_IN;

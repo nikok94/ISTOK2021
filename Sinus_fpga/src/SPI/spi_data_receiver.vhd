@@ -36,6 +36,8 @@ mode <= c_cpol XOR c_cpha;
   WITH mode SELECT
     ssck <= NOT SCK WHEN '1',
             SCK WHEN OTHERS;
+            
+MOSI_reg <= MOSI;
 
 c_msb_first_gen : if c_lsb_first /= true generate
 
@@ -45,7 +47,6 @@ input_reg_proc :
     if rising_edge(ssck) then
       input_reg(input_reg'length - 1 downto 1) <= input_reg(input_reg'length - 2 downto 0);
       input_reg(0) <= MOSI;
-      MOSI_reg <= MOSI;
     end if;
   end process;
 
@@ -71,12 +72,12 @@ sck_counter_proc :
       sck_counter <= 0;
       VALID <= '0';
     elsif rising_edge(ssck) then
-      if (sck_counter = C_D_WIDTH - 1) then
-        sck_counter <= 0;
-        VALID <= '1';
-      else
+      if (sck_counter < C_D_WIDTH - 1) then
         sck_counter <= sck_counter + 1;
         VALID <= '0';
+      else
+        sck_counter <= 0;
+        VALID <= '1';
       end if;
     end if;
   end process;

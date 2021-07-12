@@ -334,6 +334,7 @@ main_proc :
           end if;
         when x"01" =>
           PulseGen_Block_rst <= '0';
+          int_status(STATUS_STRUCT'pos(SHOOTING)) <= '1';
           if (stop_sync = '1') then
             state <= x"00";
           end if;

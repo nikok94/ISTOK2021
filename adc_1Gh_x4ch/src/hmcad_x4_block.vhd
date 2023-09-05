@@ -36,7 +36,7 @@ library work;
 use work.trigger_capture;
 use work.data_recorder;
 use work.hmcad_adc_block;
-use work.aFifo;
+--use work.aFifo;
 
 entity hmcad_x4_block is
   generic (
@@ -193,7 +193,6 @@ adc_block_gen : for i in 3 downto 0 generate
       gclkdiv4_out          => adcx_tick_ms(i),
 
       d_bs                  => hmcad_d_bs(i),
-  
       data                  => adcx_data(i)
   
     );
@@ -369,7 +368,7 @@ state_process :
         when 2 =>
           for i in 0 to 3 loop
             if (adcx_enable(i) = '1') then
-              if (adcx_data(i)(8*9 - 1 downto 8*8) /= frame_sync_pattern(7 downto 0)) then
+              if (adcx_data_d0(i)(8*9 - 1 downto 8*8) /= frame_sync_pattern(7 downto 0)) then
                 hmcad_d_bs(i) <= '1';
               end if;
             else
@@ -391,12 +390,13 @@ state_process :
               end if;
             end loop;
             
+            
           end if;
         when 4 =>
           adcx_valid <= (others => '1');
           for i in 0 to 3 loop
             if (adcx_enable(i) = '1') then
-              if (adcx_data(i)(8*9 - 1 downto 8*8) /= frame_sync_pattern(7 downto 0)) then
+              if (adcx_data_d0(i)(8*9 - 1 downto 8*8) /= frame_sync_pattern(7 downto 0)) then
                 state <= 0;
                 state_counter <= 0;
               end if;

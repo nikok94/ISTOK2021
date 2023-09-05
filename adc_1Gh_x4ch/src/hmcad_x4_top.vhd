@@ -38,7 +38,7 @@ use work.clock_generator;
 use work.spi_adc_250x4_master;
 use work.hmcad_x4_block;
 use work.QSPI_interconnect;
-use work.aFifo;
+--use work.aFifo;
 --use work.phaseAnalyzer_basedDCM;
 
 
@@ -315,9 +315,9 @@ end process;
 process(clk_125MHz)
 begin
   if rising_edge(clk_125MHz) then
-    adcx_calib_done_d <= adcx_calib_done;
-    adcx_all_calib_done <= adcx_calib_done_d(3) and adcx_calib_done_d(2) and adcx_calib_done_d(1) and adcx_calib_done_d(0); 
-    dd(1) <= adcx_all_calib_done;
+--    adcx_calib_done_d <= adcx_calib_done;
+--    adcx_all_calib_done <= adcx_calib_done_d(3) and adcx_calib_done_d(2) and adcx_calib_done_d(1) and adcx_calib_done_d(0); 
+--    dd(1) <= adcx_all_calib_done;
     dd(0) <= pll_lock;
   end if;
 end process;
@@ -551,6 +551,15 @@ hmcad_x4_block_inst : entity hmcad_x4_block
     adcx_fclk_out           => adcx_fclk_out
 
   );
+  
+process(hmcad_x_clk(0))
+begin
+  if rising_edge(hmcad_x_clk(0)) then
+    adcx_calib_done_d <= adcx_calib_done;
+    adcx_all_calib_done <= adcx_calib_done_d(3) and adcx_calib_done_d(2) and adcx_calib_done_d(1) and adcx_calib_done_d(0); 
+    dd(1) <= adcx_all_calib_done;
+  end if;
+end process;
 
 
 --process(clk_125MHz)

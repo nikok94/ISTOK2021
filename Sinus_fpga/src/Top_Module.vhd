@@ -45,9 +45,9 @@ entity Top_Module is port(
     ------------------------------
     -- external signals
     Interlock_IN            : in std_logic;-- Interlock
-    Trigatron_IN				 : in std_logic;-- Trigatron
-    Slave_Ready_IN				: in std_logic; -- Slave Ready
-    Ext_Start_Out        	: out std_logic;
+    Trigatron_IN            : in std_logic;-- Trigatron
+    Slave_Ready_IN          : in std_logic; -- Slave Ready
+    Ext_Start_Out           : out std_logic;
     Ext_Start_IN            : in std_logic;
     Slave_Start_Out_Int     : in std_logic;
     Slave_Sync 				: out std_logic;

@@ -83,6 +83,7 @@ architecture Behavioral of hmcad_adc_block is
   signal gclkdiv4                       : std_logic := '0';
   signal gclk_bufg                      : std_logic;
   signal data_ibufgds                   : std_logic_vector(8 downto 0);
+  signal d_bs_s                         : std_logic;
 
 begin
 
@@ -182,8 +183,9 @@ serdes_1_to_n_data_ddr_s8_diff_inst : entity serdes_1_to_n_data_ddr_s8_diff
     rxioclkn              => deser_clkrxioclkn,
     rxserdesstrobe        => deser_clkrx_serdesstrobe,
     reset                 => areset,
-    gclk                  => clk,
-    bitslip               => d_bs,
+    gclk                  => gclk_bufg,
+--    bitslip               => d_bs,
+    bitslip               => d_bs_s,
     debug_in              => "00",
     data_out              => deser_data_out,
     data_ibufgds          => data_ibufgds,
@@ -203,8 +205,13 @@ bufg_fclk : bufg
 ----    deser_data_out_rev(8*i + j) <= deser_data_out(8*i + 7 - j);
 ----  end generate j_gen;
 ----end generate i_gen;
-
-deser_data_out_rev <= deser_data_out;
+process(gclk_bufg)
+begin
+  if rising_edge(gclk_bufg) then
+    deser_data_out_rev <= deser_data_out;
+    d_bs_s <= d_bs;
+  end if;
+end process;
 
 process (clk, areset)
 begin
